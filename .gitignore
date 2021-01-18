@@ -15,6 +15,7 @@
 *.so
 *.dylib
 *.dll
+!SDL2.dll
 
 # Fortran module files
 *.mod
@@ -25,6 +26,9 @@
 *.la
 *.a
 *.lib
+!SDL2.lib
+!SDL2main.lib
+!SDL2test.lib
 
 # Executables
 *.exe
@@ -38,3 +42,14 @@ CMakeFiles/
 cmake_install.cmake
 CMakeCache.txt
 Makefile
+
+#Visual Studio
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+Debug/
+Emulator.dir/
+
+#imgui
+imgui.ini

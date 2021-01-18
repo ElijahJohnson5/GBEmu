@@ -14,7 +14,7 @@
 #include "CPU.h"
 #include "Instructions.h"
 
-int main()
+int main(int argc, char *args[])
 {
     if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
         printf("Could not initialize SDL\n");

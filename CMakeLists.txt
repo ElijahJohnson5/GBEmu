@@ -14,7 +14,7 @@ set(SRC
     src/imgui/imgui.cpp
     src/glad/glad.c
     src/Main.cpp
-    src/Display.cpp
+    src/Display.c
 )
 
 if (WIN32)

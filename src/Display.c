@@ -25,6 +25,8 @@ Window *createWindow(const char* title, int width, int height, int shown)
 	window->shown = shown;
 	window->width = width;
 	window->height = height;
+
+	return window;
 }
 
 void destroyWindow(Window* window)

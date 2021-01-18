@@ -19,7 +19,7 @@ set(SRC
 if (WIN32)
     set(SDL2_DIR "${CMAKE_CURRENT_LIST_DIR}/SDL2-2.0.14/")
     #Add h files for visual studio don't need these on linux
-    set(APPEND SRC 
+    list(APPEND SRC 
         include/CPU.h
         include/Instructions.h
         include/Memory.h

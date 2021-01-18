@@ -23,8 +23,8 @@ void JR(CPU *cpu, int8_t offset);
 extern "C" {
 #endif
 
-const Instruction instructions[256];
-const Instruction prefixInstructions[256];
+extern const Instruction instructions[256];
+extern const Instruction prefixInstructions[256];
 
 #ifdef __cplusplus
 }

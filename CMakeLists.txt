@@ -14,6 +14,7 @@ set(SRC
     src/imgui/imgui.cpp
     src/glad/glad.c
     src/Main.cpp
+    src/Display.cpp
 )
 
 if (WIN32)
@@ -33,6 +34,7 @@ if (WIN32)
         include/Main.h
         include/glad/glad.h
         include/KHR/khrplatform.h
+        include/Display.h
     )
 endif()
 
@@ -44,10 +46,9 @@ add_executable(Emulator
 
 target_include_directories(Emulator PUBLIC include include/imgui include/glad ${SDL2_INCLUDE_DIRS})
 
-target_compile_options(Emulator PUBLIC -Wall)
-
 if (NOT WIN32)
     target_link_libraries(Emulator dl m)
+    target_compile_options(Emulator PUBLIC -Wall)
 else ()
     add_custom_command(TARGET Emulator POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SDL2_DLL}" $<TARGET_FILE_DIR:Emulator>

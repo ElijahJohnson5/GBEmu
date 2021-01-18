@@ -50,6 +50,7 @@ Makefile
 *.sln
 Debug/
 Emulator.dir/
+.vs/
 
 #imgui
 imgui.ini

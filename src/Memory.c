@@ -21,8 +21,6 @@ static uint8_t BIOS[0x100] = {
 	0xF5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xFB, 0x86, 0x20, 0xFE, 0x3E, 0x01, 0xE0, 0x50 
 };
 
-#pragma GCC diagnostic ignored "-Warray-bounds"
-
 uint8_t readAddr8(MMU* mmu, uint16_t addr) 
 {
     if (!(*mmu->finishedBios) && addr >= 0x00 && addr <= 0xFF)
@@ -175,6 +173,13 @@ void writeAddr16(MMU* mmu, uint16_t addr, uint16_t data)
 MMU* createMMU()
 {
     MMU* mmu = (MMU*)malloc(sizeof(MMU));
+
+    if (mmu == NULL)
+    {
+        printf("Could not create MMU, malloc failed\n");
+        return NULL;
+    }
+
     mmu->finishedBios = mmu->addr + 0xFF50;
     return mmu;
 }

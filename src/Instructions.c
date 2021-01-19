@@ -29,7 +29,7 @@ void XOR(CPU* cpu, uint8_t value)
     cpu->cc.n = 0;
 }
 
-uint8_t DEC8(CPU* cpu, uint8_t value)
+uint8_t DEC(CPU* cpu, uint8_t value)
 {
     value--;
 
@@ -38,6 +38,28 @@ uint8_t DEC8(CPU* cpu, uint8_t value)
     cpu->cc.z = value == 0;
 
     return value;
+}
+
+void SUB(CPU* cpu, uint8_t value)
+{
+    cpu->cc.n = 1;
+
+    int8_t signedSub = (int8_t)(cpu->a - value);
+    uint8_t unsingedRes = (uint8_t)signedSub;
+
+    cpu->cc.c = signedSub < 0;
+    cpu->cc.h = (unsingedRes & 0xF) > (cpu->a & 0xF);
+    cpu->cc.z = unsingedRes == 0;
+
+    cpu->a = unsingedRes;
+}
+
+void CP(CPU* cpu, uint8_t value)
+{
+    cpu->cc.n = 1;
+    cpu->cc.z = value == cpu->a;
+    cpu->cc.h = ((cpu->a & 0xF) - (value & 0xF)) < 0;
+    cpu->cc.c = cpu->a < value;
 }
 
 void XOR_A_A(CPU* cpu, MMU* mmu)
@@ -82,14 +104,27 @@ void LD_FF00_A(CPU* cpu, MMU* mmu)
     writeAddr8(mmu, 0xFF00 + value, cpu->a);
 }
 
+void LD_A_FF00_N(CPU* cpu, MMU* mmu)
+{
+    uint8_t offset = readAddr8(mmu, cpu->pc);
+    uint8_t value = readAddr8(mmu, 0xFF00 + offset);
+
+    cpu->a = value;
+}
+
+void LD_B_H(CPU* cpu, MMU* mmu)
+{
+    cpu->b = cpu->h;
+}
+
 void DEC_B(CPU* cpu, MMU* mmu)
 {
-    cpu->b = DEC8(cpu, cpu->b);
+    cpu->b = DEC(cpu, cpu->b);
 }
 
 void DEC_C(CPU* cpu, MMU* mmu)
 {
-    cpu->c = DEC8(cpu, cpu->c);
+    cpu->c = DEC(cpu, cpu->c);
 }
 
 void JR_NZ_N(CPU* cpu, MMU* mmu)
@@ -115,6 +150,17 @@ void JP(CPU* cpu, uint16_t addr, uint8_t offset)
 {
     cpu->pc = addr - offset;
     cpu->currentClock += 4;
+}
+
+void CP_A_N(CPU* cpu, MMU* mmu)
+{
+    uint8_t value = readAddr8(mmu, cpu->pc);
+    CP(cpu, value);
+}
+
+void SUB_A_H(CPU* cpu, MMU* mmu)
+{
+    SUB(cpu, cpu->h);
 }
 
 const Instruction instructions[256] = {
@@ -190,7 +236,7 @@ const Instruction instructions[256] = {
     {"LD B,C", 0, 4, NULL},// case 0x41: printf("LD B,C "); break;
     {"LD B,D", 0, 4, NULL},// case 0x42: printf("LD B,D "); break;
     {"LD B,E", 0, 4, NULL},// case 0x43: printf("LD B,E "); break;
-    {"LD B,H", 0, 4, NULL},// case 0x44: printf("LD B,H "); break;
+    {"LD B,H", 0, 4, &LD_B_H},// case 0x44: printf("LD B,H "); break;
     {"LD B,L", 0, 4, NULL},// case 0x45: printf("LD B,L "); break;
     {"LD B,(HL)", 0, 8, NULL},// case 0x46: printf("LD B,(HL) "); break;
     {"LD B,A", 0, 4, NULL},// case 0x47: printf("LD B,A");
@@ -277,7 +323,7 @@ const Instruction instructions[256] = {
     {"SUB A,C", 0, 4, NULL},// case 0x91: printf("SUB A,C"); break;
     {"SUB A,D", 0, 4, NULL},// case 0x92: printf("SUB A,D"); break;
     {"SUB A,E", 0, 4, NULL},// case 0x93: printf("SUB A,E"); break;
-    {"SUB A,H", 0, 4, NULL},// case 0x94: printf("SUB A,H"); break;
+    {"SUB A,H", 0, 4, &SUB_A_H},// case 0x94: printf("SUB A,H"); break;
     {"SUB A,L", 0, 4, NULL},// case 0x95: printf("SUB A,L"); break;
     {"SUB A,(HL)", 0, 8, NULL},// case 0x96: printf("SUB A,(HL)"); break;
     {"SUB A,A", 0, 4, NULL},// case 0x97: printf("SUB A,A"); break;
@@ -380,10 +426,10 @@ const Instruction instructions[256] = {
     {"XOR A,$%02X", 1, 8, NULL},// case 0xEE: printf("XOR A,%02X", code[1]); opbytes = 2; break;
     {"RST 28h", 0, 16, NULL},// case 0xEF: printf("RST 28h"); break;
 
-    {"LD A,($FF00+$%02X)", 1, 12, NULL},// case 0xF0: printf("LD A,(FF00+%02X)", code[1]); opbytes = 2; break;
+    {"LD A,($FF00+$%02X)", 1, 12, &LD_A_FF00_N },// case 0xF0: printf("LD A,(FF00+%02X)", code[1]); opbytes = 2; break;
     {"POP AF", 0, 12, NULL},// case 0xF1: printf("POP AF"); break;
     {"LD A,($FF00+$C)", 0, 8, NULL},// case 0xF2: printf("LD A,(FF00+C)"); break;
-    {"DI", 0, 4, NULL},// case 0xF3: printf("DI"); break;
+    {"DI", 0, 4, &DI},// case 0xF3: printf("DI"); break;
     {"ERROR", 0, 0, NULL},
     {"PUSH AF", 0, 16, NULL},// case 0xF5: printf("PUSH AL"); break;
     {"OP A,$%02X", 1, 8, NULL},// case 0xF6: printf("OP A,%02X", code[1]); opbytes = 2; break;
@@ -394,7 +440,7 @@ const Instruction instructions[256] = {
     {"EI", 0, 4, NULL},// case 0xFB: printf("EI"); break;
     {"ERROR", 0, 0, NULL},
     {"ERROR", 0, 0, NULL},
-    {"CP A,$%02X", 1, 8, NULL},// case 0xFE: printf("CP A,%02X", code[1]); opbytes = 2; break;
+    {"CP A,$%02X", 1, 8, &CP_A_N},// case 0xFE: printf("CP A,%02X", code[1]); opbytes = 2; break;
     {"RST 38h", 0, 16, NULL},// case 0xFF: printf("RST 38h"); break;
 };
 

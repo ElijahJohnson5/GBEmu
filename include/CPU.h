@@ -69,6 +69,7 @@ void destroyCPU(CPU* cpu);
 void resetCPU(CPU* cpu);
 void loadGame(CPU* cpu, MMU* mmu);
 void stepCPU(CPU* cpu, MMU* mmu);
+
 #ifdef __cplusplus
 }
 #endif

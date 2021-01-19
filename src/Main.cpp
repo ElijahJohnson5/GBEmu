@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sstream>
+#include <iomanip>
+#include <map>
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
@@ -14,6 +17,7 @@
 #include "CPU.h"
 #include "Instructions.h"
 #include "Display.h"
+#include "DebuggerGUI.h"
 
 int main(int argc, char *args[])
 {
@@ -39,6 +43,7 @@ int main(int argc, char *args[])
     }
 
     SDL_GL_MakeCurrent(display->debugWindow->window, display->glContext);
+    SDL_GL_SetSwapInterval(0);
 
     gladLoadGL();
 
@@ -66,6 +71,18 @@ int main(int argc, char *args[])
     fread(file, 1, size, gbFile);
 
     fclose(gbFile);
+
+    int pc = 0;
+    int i = 0;
+
+    DisassembledInstruction disassembledInstructions[0x7FFF];
+    std::map<int, int> pcToIndex;
+
+    while (pc < size)
+    {
+        pcToIndex[pc] = i;
+        disassembledInstructions[i++] = disassembleInstructions(file, &pc);
+    }
 
 
     int quit = 0;
@@ -95,10 +112,17 @@ int main(int argc, char *args[])
 
     while (!quit)
     {
-        handleEvents(display, &quit);
+        handleEvents(display, &quit, &ImGui_ImplSDL2_ProcessEvent);
 
         //PrintGBState(cpu, mmu);
-        stepCPU(cpu, mmu);
+        if (!DebuggerGUI::paused)
+        {
+            stepCPU(cpu, mmu);
+            if (disassembledInstructions[pcToIndex[cpu->pc]].breakpoint)
+            {
+                DebuggerGUI::paused = true;
+            }
+        }
 
         if (display->debugWindow->shown)
         {
@@ -107,28 +131,8 @@ int main(int argc, char *args[])
             ImGui_ImplSDL2_NewFrame(display->debugWindow->window);
             ImGui::NewFrame();
             {
-                static float f = 0.0f;
-                static int counter = 0;
-                ImGui::SetNextWindowSize(ImVec2(500, 500), ImGuiCond_Appearing);
-                ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-                ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-                ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-                ImGui::Checkbox("Another Window", &show_another_window);
-
-                ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-                ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-                if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-                    counter++;
-                ImGui::SameLine();
-                ImGui::Text("counter = %d", counter);
-
-                ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-                ImGui::End();
+                DebuggerGUI::ShowDebuggerGUI(cpu, mmu, disassembledInstructions, i);
             }
-
-
             ImGui::Render();
             glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
             glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
@@ -154,6 +158,53 @@ int main(int argc, char *args[])
     SDL_Quit();
 
     return 0;
+}
+
+DisassembledInstruction disassembleInstructions(unsigned char* codebuffer, int *pc)
+{
+    unsigned char* code = &codebuffer[*pc];
+
+    DisassembledInstruction ins;
+    ins.pc = *pc;
+    ins.breakpoint = false;
+
+    std::stringstream instru;
+
+    instru << std::uppercase << std::setfill('0') << std::setw(4) << std::hex << *pc << ": ";
+
+    Instruction current = instructions[*code];
+
+    if (strcmp(current.disassembly, "PREFIX") == 0)
+    {
+        current = prefixInstructions[*(code + 1)];
+
+        instru << std::string(current.disassembly);
+        (*pc) += 2;
+    }
+    else if (current.operandCount == 0)
+    {
+        instru << std::string(current.disassembly);
+        (*pc)++;
+    }
+    else if (current.operandCount == 1)
+    {
+        char buf[1024];
+        sprintf(buf, current.disassembly, code[1]);
+        instru << std::string(buf);
+        (*pc) += 2;
+    }
+    else if (current.operandCount == 2)
+    {
+        char buf[1024];
+        sprintf(buf, current.disassembly, code[2], code[1]);
+        instru << std::string(buf);
+        (*pc) += 3;
+    }
+
+    ins.disassembly = new char[instru.str().length()];
+    strcpy(ins.disassembly, instru.str().c_str());
+
+    return ins;
 }
 
 void PrintGBState(CPU *cpu, MMU* mmu)
@@ -187,68 +238,3 @@ void PrintGBState(CPU *cpu, MMU* mmu)
     }
     printf("\n");
 }
-
-/*
-int DisassembleGB(unsigned char *codebuffer, int pc)
-{
-    unsigned char *code = &codebuffer[pc];
-    //printf("%04X ", pc);
-    #ifdef _DEBUG
-    fprintf(debugFile, "%04X: ", pc);
-    #else 
-    printf("%04X: ", pc);
-    #endif
-
-    Instruction current = instructions[*code];
-    if (current.execute == NULL)
-    {
-        #ifdef _DEBUG
-        fprintf(debugFile, "Need to implement: %02X: %s", *code, current.disassembly);
-        fprintf(debugFile, "\n");
-        #else 
-        printf("Need to implement: %02X: %s", *code, current.disassembly);
-        printf("\n");
-        #endif
-        return current.operandCount + 1;
-    }
-
-    if (strcmp(current.disassembly, "PREFIX") == 0)
-    {
-        current = prefixInstructions[*(code + 1)];
-
-        if (current.execute == NULL)
-        {
-            #ifdef _DEBUG
-            fprintf(debugFile, "Need to implement: %02X: %s", *code, current.disassembly);
-            fprintf(debugFile, "\n");
-            #else 
-            printf("Need to implement: %02X: %s", *code, current.disassembly);
-            printf("\n");
-            #endif
-            return current.operandCount + 1;
-        }
-
-        ((ZeroOperands)current.execute)(current.disassembly);
-    }
-    else if (current.operandCount == 0)
-    {
-        ((ZeroOperands)current.execute)(current.disassembly);
-    }
-    else if (current.operandCount == 1)
-    {
-        ((OneOperands)current.execute)(current.disassembly, code[1]);
-    }
-    else if (current.operandCount == 2)
-    {
-        ((TwoOperands)current.execute)(current.disassembly, code[2], code[1]);
-    }
-
-    #ifdef _DEBUG
-    fprintf(debugFile, "\n");
-    #else 
-    printf("\n");
-    #endif
-
-    return current.operandCount + 1;
-}
-*/

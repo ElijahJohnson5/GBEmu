@@ -26,6 +26,8 @@ Window *createWindow(const char* title, int width, int height, int shown)
 	window->width = width;
 	window->height = height;
 
+	window->id = SDL_GetWindowID(window->window);
+
 	return window;
 }
 
@@ -80,6 +82,9 @@ Display* createDisplay()
 		return NULL;
 	}
 
+	SDL_GL_MakeCurrent(display->mainWindow->window, display->glContext);
+	SDL_GL_SetSwapInterval(0);
+
 	return display;
 }
 
@@ -104,28 +109,43 @@ void destroyDisplay(Display* display)
 	display = NULL;
 }
 
-void handleEvents(Display* display, int* quit)
+void handleEvents(Display* display, int* quit, bool (*imGuiEventProcessor)(const SDL_Event* event))
 {
 	SDL_Event event;
 	while (SDL_PollEvent(&event))
 	{
+		imGuiEventProcessor(&event);
 		switch (event.type)
 		{
 			case SDL_QUIT:
 				*quit = 1;
 				break;
 			case SDL_WINDOWEVENT:
-				if (event.window.event == SDL_WINDOWEVENT_CLOSE)
+				switch (event.window.event)
 				{
-					if (event.window.windowID == SDL_GetWindowID(display->mainWindow->window))
-					{
-						*quit = 1;
-					}
-					else if (event.window.windowID == SDL_GetWindowID(display->debugWindow->window) && display->debugWindow->shown == 1)
-					{
-						SDL_HideWindow(display->debugWindow->window);
-						display->debugWindow->shown = 0;
-					}
+					case SDL_WINDOWEVENT_CLOSE:
+						if (event.window.windowID == display->mainWindow->id)
+						{
+							*quit = 1;
+						}
+						else if (event.window.windowID == display->debugWindow->id && display->debugWindow->shown == 1)
+						{
+							SDL_HideWindow(display->debugWindow->window);
+							display->debugWindow->shown = 0;
+						}
+						break;
+					case SDL_WINDOWEVENT_RESIZED:
+						if (event.window.windowID == display->mainWindow->id)
+						{
+							display->mainWindow->width = event.window.data1;
+							display->mainWindow->height = event.window.data2;
+						}
+						else if (event.window.windowID == display->debugWindow->id)
+						{
+							display->debugWindow->width = event.window.data1;
+							display->debugWindow->height = event.window.data2;
+						}
+						break;
 				}
 				break;
 		}

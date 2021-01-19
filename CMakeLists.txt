@@ -15,6 +15,7 @@ set(SRC
     src/glad/glad.c
     src/Main.cpp
     src/Display.c
+    src/DebuggerGUI.cpp
 )
 
 if (WIN32)
@@ -35,6 +36,8 @@ if (WIN32)
         include/glad/glad.h
         include/KHR/khrplatform.h
         include/Display.h
+        include/DebuggerGUI.h
+        include/imgui/imgui_memory_editor.h
     )
 endif()
 

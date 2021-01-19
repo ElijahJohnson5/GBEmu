@@ -3,11 +3,14 @@
 
 #include <SDL.h>
 
+#include <stdbool.h>
+
 typedef struct Window {
 	SDL_Window* window;
 	int width;
 	int height;
 	int shown;
+	uint32_t id;
 } Window;
 
 typedef struct Display {
@@ -27,7 +30,7 @@ void destroyWindow(Window* window);
 Display* createDisplay();
 void destroyDisplay(Display* display);
 
-void handleEvents(Display* display, int* quit);
+void handleEvents(Display* display, int* quit, bool (*imGuiEventProcessor)(const SDL_Event *event));
 void updateMainWindow(Display* display);
 
 #ifdef __cplusplus

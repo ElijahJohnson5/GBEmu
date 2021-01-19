@@ -13,8 +13,6 @@
 #include "glad/glad.h"
 
 #include "Main.h"
-#include "Memory.h"
-#include "CPU.h"
 #include "Instructions.h"
 #include "Display.h"
 #include "DebuggerGUI.h"
@@ -138,7 +136,7 @@ int main(int argc, char *args[])
             SDL_GL_SwapWindow(display->debugWindow->window);
         }
         
-        updateMainWindow(display);
+        //updateMainWindow(display);
     }
 
 

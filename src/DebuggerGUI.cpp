@@ -31,31 +31,34 @@ void DebuggerGUI::ShowDebuggerGUI(CPU* cpu, MMU* mmu, DisassembledInstruction* d
         ImGui::Text("PC: %X SP: %X\n", cpu->pc, cpu->sp);
         ImGui::Text("Z: %X N: %X H: %X C: %X\n", cpu->cc.z, cpu->cc.n, cpu->cc.h, cpu->cc.c);
         ImGui::Text("Next instruction to execute: %X\n", op);
-        Instruction current = instructions[op];
 
-        if (strcmp(current.disassembly, "PREFIX") == 0)
+        if (paused)
         {
-            current = prefixInstructions[readAddr8(mmu, cpu->pc + 1)];
-            ImGui::Text(current.disassembly);
-        }
-        else if (current.operandCount == 0)
-        {
-            ImGui::Text(current.disassembly);
-        }
-        else if (current.operandCount == 1)
-        {
-            ImGui::Text(current.disassembly, readAddr8(mmu, cpu->pc + 1));
-        }
-        else if (current.operandCount == 2)
-        {
-            ImGui::Text(current.disassembly, readAddr8(mmu, cpu->pc + 2), readAddr8(mmu, cpu->pc + 1));
-        }
+            Instruction current = instructions[op];
 
-        if (current.execute == NULL)
-        {
-            ImGui::Text("Need to implement this instructions");
-        }
-        
+            if (strcmp(current.disassembly, "PREFIX") == 0)
+            {
+                current = prefixInstructions[readAddr8(mmu, cpu->pc + 1)];
+                ImGui::Text(current.disassembly);
+            }
+            else if (current.operandCount == 0)
+            {
+                ImGui::Text(current.disassembly);
+            }
+            else if (current.operandCount == 1)
+            {
+                ImGui::Text(current.disassembly, readAddr8(mmu, cpu->pc + 1));
+            }
+            else if (current.operandCount == 2)
+            {
+                ImGui::Text(current.disassembly, readAddr8(mmu, cpu->pc + 2), readAddr8(mmu, cpu->pc + 1));
+            }
+
+            if (current.execute == NULL)
+            {
+                ImGui::Text("Need to implement this instructions");
+            }
+        }  
 
         ImGui::TreePop();
     }

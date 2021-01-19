@@ -139,7 +139,11 @@ int main(int argc, char *args[])
         }
         
         updateMainWindow(display);
-        //getchar();
+    }
+
+
+    for (int j = 0; j < i; j++) {
+        delete[] disassembledInstructions[i].disassembly;
     }
 
     delete[] disassembledInstructions;
@@ -200,7 +204,7 @@ DisassembledInstruction disassembleInstructions(unsigned char* codebuffer, int *
         (*pc) += 3;
     }
 
-    ins.disassembly = new char[instru.str().length()];
+    ins.disassembly = new char[instru.str().length() + 1];
     strcpy(ins.disassembly, instru.str().c_str());
 
     return ins;

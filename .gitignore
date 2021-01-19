@@ -49,6 +49,7 @@ Makefile
 *.vcxproj.user
 *.sln
 Debug/
+Release/
 Emulator.dir/
 .vs/
 

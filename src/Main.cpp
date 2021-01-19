@@ -74,8 +74,7 @@ int main(int argc, char *args[])
 
     int pc = 0;
     int i = 0;
-
-    DisassembledInstruction disassembledInstructions[0x7FFF];
+    DisassembledInstruction* disassembledInstructions = new DisassembledInstruction[0x7FFF];
     std::map<int, int> pcToIndex;
 
     while (pc < size)
@@ -98,7 +97,7 @@ int main(int argc, char *args[])
     }
 
     CPU* cpu = createCPU();
-    
+
     memcpy(mmu->rom, file, size);
 
     free(file);
@@ -106,8 +105,6 @@ int main(int argc, char *args[])
     loadBios(mmu);
     resetCPU(cpu);
     loadGame(cpu, mmu);
-    bool show_demo_window = true;
-    bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     while (!quit)
@@ -140,10 +137,12 @@ int main(int argc, char *args[])
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
             SDL_GL_SwapWindow(display->debugWindow->window);
         }
-
+        
         updateMainWindow(display);
         //getchar();
     }
+
+    delete[] disassembledInstructions;
 
     destroyMMU(mmu);
     destroyCPU(cpu);

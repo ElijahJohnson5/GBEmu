@@ -24,36 +24,48 @@ void DebuggerGUI::ShowDebuggerGUI(CPU* cpu, MMU* mmu, DisassembledInstruction* d
 
     if (ImGui::TreeNode("CPU"))
     {
-        uint8_t op = readAddr8(mmu, cpu->pc);
+        if (paused)
+        {
+            uint8_t op = readAddr8(mmu, cpu->pc);
 
-        ImGui::Text("A: %X B: %X C: %X D: %X\n", cpu->a, cpu->b, cpu->c, cpu->d);
-        ImGui::Text("E: %X F: %X H: %X L: %X\n", cpu->e, cpu->f, cpu->h, cpu->l);
-        ImGui::Text("PC: %X SP: %X\n", cpu->pc, cpu->sp);
-        ImGui::Text("Z: %X N: %X H: %X C: %X\n", cpu->cc.z, cpu->cc.n, cpu->cc.h, cpu->cc.c);
-        ImGui::Text("Next instruction to execute: %X\n", op);
-        Instruction current = instructions[op];
+            ImGui::Text("A: %X B: %X C: %X D: %X\n", cpu->a, cpu->b, cpu->c, cpu->d);
+            ImGui::Text("E: %X F: %X H: %X L: %X\n", cpu->e, cpu->f, cpu->h, cpu->l);
+            ImGui::Text("PC: %X SP: %X\n", cpu->pc, cpu->sp);
+            ImGui::Text("Z: %X N: %X H: %X C: %X\n", cpu->cc.z, cpu->cc.n, cpu->cc.h, cpu->cc.c);
+            ImGui::Text("Next instruction to execute: %X\n", op);
+            Instruction current = instructions[op];
 
-        if (strcmp(current.disassembly, "PREFIX") == 0)
-        {
-            current = prefixInstructions[readAddr8(mmu, cpu->pc + 1)];
-            ImGui::Text(current.disassembly);
-        }
-        else if (current.operandCount == 0)
-        {
-            ImGui::Text(current.disassembly);
-        }
-        else if (current.operandCount == 1)
-        {
-            ImGui::Text(current.disassembly, readAddr8(mmu, cpu->pc + 1));
-        }
-        else if (current.operandCount == 2)
-        {
-            ImGui::Text(current.disassembly, readAddr8(mmu, cpu->pc + 2), readAddr8(mmu, cpu->pc + 1));
-        }
+            if (strcmp(current.disassembly, "PREFIX") == 0)
+            {
+                current = prefixInstructions[readAddr8(mmu, cpu->pc + 1)];
+                ImGui::Text(current.disassembly);
+            }
+            else if (current.operandCount == 0)
+            {
+                ImGui::Text(current.disassembly);
+            }
+            else if (current.operandCount == 1)
+            {
+                ImGui::Text(current.disassembly, readAddr8(mmu, cpu->pc + 1));
+            }
+            else if (current.operandCount == 2)
+            {
+                ImGui::Text(current.disassembly, readAddr8(mmu, cpu->pc + 2), readAddr8(mmu, cpu->pc + 1));
+            }
 
-        if (current.execute == NULL)
+            if (current.execute == NULL)
+            {
+                ImGui::Text("Need to implement this instructions");
+            }
+        }
+        else
         {
-            ImGui::Text("Need to implement this instructions");
+            ImGui::TextUnformatted("A: 0 B: 0 C: 0 D: 0");
+            ImGui::TextUnformatted("E: 0 F: 0 H: 0 L: 0");
+            ImGui::TextUnformatted("PC: 0 SP: 0");
+            ImGui::TextUnformatted("Z: 0 N: 0 H: 0 C: 0");
+            ImGui::TextUnformatted("Next instruction to execute: 0");
+            ImGui::TextUnformatted("No Instruction While Running");
         }
 
         ImGui::TreePop();
@@ -148,7 +160,7 @@ void DebuggerGUI::ShowDisassemblyGUI(CPU* cpu, MMU* mmu, DisassembledInstruction
         {
             DisassembledInstruction &ins = disassembledInstructions[i];
 
-            if (cpu->pc == ins.pc)
+            if (paused && cpu->pc == ins.pc)
             {
                 ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), ins.disassembly);
             }

@@ -29,10 +29,14 @@ void DebuggerGUI::ShowDebuggerGUI(CPU* cpu, MMU* mmu, DisassembledInstruction* d
         ImGui::Text("PC: %X SP: %X\n", cpu->pc, cpu->sp);
         ImGui::Text("Z: %X N: %X H: %X C: %X\n", cpu->cc.z, cpu->cc.n, cpu->cc.h, cpu->cc.c);
         ImGui::Text("Next instruction to execute: %X\n", cpu->currentOp);
+        ImGui::TextUnformatted("Disassembled Instruction:");
 
-        if (paused)
-        {
+        //if (paused)
+        //{
             Instruction current = instructions[cpu->currentOp];
+
+            ImGui::TextUnformatted("\t");
+            ImGui::SameLine();
 
             if (strcmp(current.disassembly, "PREFIX") == 0)
             {
@@ -56,9 +60,9 @@ void DebuggerGUI::ShowDebuggerGUI(CPU* cpu, MMU* mmu, DisassembledInstruction* d
             {
                 ImGui::Text("Need to implement this instructions");
             }
-        } 
+        //} 
 
-        ImGui::Text("");
+        ImGui::Text("Total Cycles: %lu", cpu->totalClock);
 
         ImGui::TreePop();
     }
@@ -86,6 +90,18 @@ void DebuggerGUI::ShowDebuggerGUI(CPU* cpu, MMU* mmu, DisassembledInstruction* d
     ImGui::SetNextItemOpen(true);
     if (ImGui::TreeNode("Debugging"))
     {
+        if (paused)
+        {
+            if (ImGui::Button("Step"))
+            {
+                if (step != nullptr)
+                {
+                    step(cpu, mmu);
+                }
+            }
+        }
+
+
         if (!paused)
         {
             if (ImGui::Button("Pause"))
@@ -101,17 +117,6 @@ void DebuggerGUI::ShowDebuggerGUI(CPU* cpu, MMU* mmu, DisassembledInstruction* d
             }
 
             ImGui::SameLine();
-        }
-
-        if (paused)
-        {
-            if (ImGui::Button("Step"))
-            {
-                if (step != nullptr)
-                {
-                    step(cpu, mmu);
-                }
-            }
         }
 
         ImGui::SameLine();

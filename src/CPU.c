@@ -38,6 +38,7 @@ void loadGame(CPU* cpu, MMU* mmu)
 void stepCPU(CPU* cpu, MMU* mmu)
 {
     uint8_t op = readAddr8(mmu, cpu->pc);
+    cpu->currentOp = op;
 
     Instruction current = instructions[op];
     cpu->pc++;
@@ -45,6 +46,7 @@ void stepCPU(CPU* cpu, MMU* mmu)
     {
         op = readAddr8(mmu, cpu->pc);
         current = prefixInstructions[op];
+        cpu->currentOp = op;
         cpu->pc++;
     }
 

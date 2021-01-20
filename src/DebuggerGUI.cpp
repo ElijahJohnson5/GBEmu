@@ -24,17 +24,15 @@ void DebuggerGUI::ShowDebuggerGUI(CPU* cpu, MMU* mmu, DisassembledInstruction* d
 
     if (ImGui::TreeNode("CPU"))
     {
-        uint8_t op = readAddr8(mmu, cpu->pc);
-
         ImGui::Text("A: %X B: %X C: %X D: %X\n", cpu->a, cpu->b, cpu->c, cpu->d);
         ImGui::Text("E: %X F: %X H: %X L: %X\n", cpu->e, cpu->f, cpu->h, cpu->l);
         ImGui::Text("PC: %X SP: %X\n", cpu->pc, cpu->sp);
         ImGui::Text("Z: %X N: %X H: %X C: %X\n", cpu->cc.z, cpu->cc.n, cpu->cc.h, cpu->cc.c);
-        ImGui::Text("Next instruction to execute: %X\n", op);
+        ImGui::Text("Next instruction to execute: %X\n", cpu->currentOp);
 
         if (paused)
         {
-            Instruction current = instructions[op];
+            Instruction current = instructions[cpu->currentOp];
 
             if (strcmp(current.disassembly, "PREFIX") == 0)
             {
@@ -58,7 +56,9 @@ void DebuggerGUI::ShowDebuggerGUI(CPU* cpu, MMU* mmu, DisassembledInstruction* d
             {
                 ImGui::Text("Need to implement this instructions");
             }
-        }  
+        } 
+
+        ImGui::Text("");
 
         ImGui::TreePop();
     }

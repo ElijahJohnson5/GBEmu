@@ -56,6 +56,7 @@ typedef struct CPU {
     uint16_t pc;
     ConditionCodes cc;
     uint8_t currentClock;
+    uint8_t currentOp;
     uint32_t totalClock;
 } CPU;
 

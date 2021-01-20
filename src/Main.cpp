@@ -3,18 +3,18 @@
 #include <string.h>
 #include <sstream>
 #include <iomanip>
-#include <map>
+#include <thread>
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
 #include "imgui/imgui_impl_opengl3.h"
+#include "imgui/imconfig.h"
 #include <SDL.h>
 
 #include "glad/glad.h"
 
 #include "Main.h"
 #include "Instructions.h"
-#include "Display.h"
 #include "DebuggerGUI.h"
 
 int main(int argc, char *args[])
@@ -33,24 +33,33 @@ int main(int argc, char *args[])
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
-    Display* display = createDisplay();
+    Window* mainWindow = createWindow("GBEmu", 1280, 720, 1);
 
-    if (!display) {
-        printf("Could not create display\n");
+    if (!mainWindow) {
+        printf("Could not create mainWindow\n");
         return -1;
     }
 
-    SDL_GL_MakeCurrent(display->debugWindow->window, display->glContext);
+    SDL_GL_MakeCurrent(mainWindow->window, mainWindow->glContext);
     SDL_GL_SetSwapInterval(0);
+
+    Window* debugWindow = createWindow("GBEmu Debugger", 1280, 720, 0);
+
+    if (!mainWindow) {
+        printf("Could not create debugWindow\n");
+        return -1;
+    }
+
+    SDL_GL_MakeCurrent(debugWindow->window, debugWindow->glContext);
+    SDL_GL_SetSwapInterval(1);
 
     gladLoadGL();
 
-    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
 
     ImGui::StyleColorsDark();
-    ImGui_ImplSDL2_InitForOpenGL(display->debugWindow->window, display->glContext);
+    ImGui_ImplSDL2_InitForOpenGL(debugWindow->window, debugWindow->glContext);
     ImGui_ImplOpenGL3_Init("#version 130");
 
     FILE* gbFile = fopen("roms/Tetris.gb", "rb");
@@ -89,7 +98,8 @@ int main(int argc, char *args[])
     if (!mmu)
     {
         printf("Could not create mmu\n");
-        destroyDisplay(display);
+        destroyWindow(mainWindow);
+        destroyWindow(debugWindow);
         free(file);
         return -1;
     }
@@ -103,41 +113,88 @@ int main(int argc, char *args[])
     loadBios(mmu);
     resetCPU(cpu);
     loadGame(cpu, mmu);
+
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+    std::thread guiThread(GUIThread, std::ref(quit), cpu, mmu, disassembledInstructions, pcToIndex);
 
     while (!quit)
     {
-        handleEvents(display, &quit, &ImGui_ImplSDL2_ProcessEvent);
-
-        //PrintGBState(cpu, mmu);
-        if (!DebuggerGUI::paused)
+        SDL_Event event;
+        while (SDL_PollEvent(&event))
         {
-            stepCPU(cpu, mmu);
-            if (disassembledInstructions[pcToIndex[cpu->pc]].breakpoint)
+            ImGui_ImplSDL2_ProcessEvent(&event);
+            switch (event.type)
             {
-                DebuggerGUI::paused = true;
+                case SDL_QUIT:
+                    quit = 1;
+                    break;
+                case SDL_WINDOWEVENT:
+                    //TODO make the windows handle their own events
+                    switch (event.window.event)
+                    {
+                        case SDL_WINDOWEVENT_CLOSE:
+                            if (event.window.windowID == mainWindow->id)
+                            {
+                                quit = 1;
+                            }
+                            else if (debugWindow->shown && event.window.windowID == debugWindow->id)
+                            {
+                                debugWindow->shown = 0;
+                                SDL_HideWindow(debugWindow->window);
+                            }
+                            break;
+                        case SDL_WINDOWEVENT_RESIZED:
+                            if (event.window.windowID == mainWindow->id)
+                            {
+                                mainWindow->width = event.window.data1;
+                                mainWindow->height = event.window.data2;
+                            }
+                            if (event.window.windowID == debugWindow->id)
+                            {
+                                debugWindow->width = event.window.data1;
+                                debugWindow->height = event.window.data2;
+                            }
+                            break;
+                    }
+                    break;
             }
         }
 
-        if (display->debugWindow->shown)
+        //TODO make this modifiable in config files
+        const uint8_t* keys = SDL_GetKeyboardState(NULL);
+
+        if (keys[SDL_SCANCODE_LCTRL] && keys[SDL_SCANCODE_B])
         {
-            SDL_GL_MakeCurrent(display->debugWindow->window, display->glContext);
+            if (debugWindow->shown == 0)
+            {
+                SDL_ShowWindow(debugWindow->window);
+                debugWindow->shown = 1;
+            }
+        }
+
+
+        if (debugWindow->shown)
+        {
+            SDL_GL_MakeCurrent(debugWindow->window, debugWindow->glContext);
             ImGui_ImplOpenGL3_NewFrame();
-            ImGui_ImplSDL2_NewFrame(display->debugWindow->window);
+            ImGui_ImplSDL2_NewFrame(debugWindow->window);
             ImGui::NewFrame();
             {
                 DebuggerGUI::ShowDebuggerGUI(cpu, mmu, disassembledInstructions, i);
             }
             ImGui::Render();
-            glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+            glViewport(0, 0, (int)debugWindow->width, (int)debugWindow->height);
             glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
             glClear(GL_COLOR_BUFFER_BIT);
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-            SDL_GL_SwapWindow(display->debugWindow->window);
+            SDL_GL_SwapWindow(debugWindow->window);
         }
-        
-        //updateMainWindow(display);
+
+        updateMainWindow(mainWindow);
     }
+
+    guiThread.join();
 
 
     for (int j = 0; j < i; j++) {
@@ -154,7 +211,7 @@ int main(int argc, char *args[])
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    destroyDisplay(display);
+    destroyWindow(mainWindow);
 
     SDL_Quit();
 
@@ -238,4 +295,20 @@ void PrintGBState(CPU *cpu, MMU* mmu)
         printf(current.disassembly, readAddr8(mmu, cpu->pc + 2), readAddr8(mmu, cpu->pc + 1));
     }
     printf("\n");
+}
+
+void GUIThread(int& quit, CPU* cpu, MMU* mmu, DisassembledInstruction* disassembledInstructions, std::map<int, int> pcToIndex)
+{
+    while (!quit)
+    {
+        if (!DebuggerGUI::paused)
+        {
+            stepCPU(cpu, mmu);
+            if (disassembledInstructions[pcToIndex[cpu->pc]].breakpoint)
+            {
+                DebuggerGUI::paused = true;
+            }
+        }
+
+    }
 }

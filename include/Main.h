@@ -1,8 +1,11 @@
 #ifndef _MAIN_H
 #define _MAIN_H
 
+#include <map>
+
 #include "CPU.h"
 #include "Memory.h"
+#include "Window.h"
 
 
 //int DisassembleGB(unsigned char *codebuffer, int pc);
@@ -16,5 +19,7 @@ typedef struct DisassembledInstruction {
 DisassembledInstruction disassembleInstructions(unsigned char* codebuffer, int *pc);
 
 void PrintGBState(CPU *cpu, MMU* mmu);
+
+void GUIThread(int& quit, CPU* cpu, MMU* mmu, DisassembledInstruction* disassembledInstructions, std::map<int, int> pcToIndex);
 
 #endif

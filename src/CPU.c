@@ -7,6 +7,7 @@
 CPU* createCPU()
 {
     CPU* cpu = (CPU*)malloc(sizeof(CPU));
+    cpu->ime = 0;
     return cpu;
 }
 
@@ -37,6 +38,7 @@ void loadGame(CPU* cpu, MMU* mmu)
 
 void stepCPU(CPU* cpu, MMU* mmu)
 {
+    cpu->currentClock = 0;
     uint8_t op = readAddr8(mmu, cpu->pc);
     cpu->currentOp = op;
 
@@ -57,8 +59,15 @@ void stepCPU(CPU* cpu, MMU* mmu)
     }
 
     current.execute(cpu, mmu);
-    cpu->currentClock = current.ticks;
+    cpu->currentClock += current.ticks;
     cpu->pc += current.operandCount;
+
+    if (cpu->ime && mmu->intenable && (*(mmu->addr + 0xFF00)))
+    {
+        uint8_t fired = mmu->intenable & (*(mmu->addr + 0xFF00));
+
+        INTERRUPT(cpu, mmu, fired);
+    }
 
     cpu->totalClock += cpu->currentClock;
 }

@@ -2,16 +2,17 @@
 
 typedef struct CPU CPU;
 typedef struct MMU MMU;
+typedef struct Video Video;
 typedef struct MemoryEditor MemoryEditor;
 typedef struct DisassembledInstruction DisassembledInstruction;
 
-typedef void (*Step)(CPU*, MMU*);
+typedef void (*Step)(Video*, CPU*, MMU*);
 
 
 class DebuggerGUI
 {
 public:
-	static void ShowDebuggerGUI(CPU* cpu, MMU* mmu, DisassembledInstruction* disassembledInstructions, int sizeInstructions);
+	static void ShowDebuggerGUI(Video* video, CPU* cpu, MMU* mmu, DisassembledInstruction* disassembledInstructions, int sizeInstructions);
 
 	static bool paused;
 	static bool showMemoryViewer;

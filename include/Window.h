@@ -3,6 +3,8 @@
 
 #include <SDL.h>
 
+typedef struct Video Video;
+
 typedef struct Window {
 	SDL_Window* window;
 	SDL_GLContext glContext;
@@ -20,7 +22,7 @@ Window* createWindow(const char* title, int width, int height, int shown);
 void destroyWindow(Window* window);
 
 void handleEvents(Window* window, int* quit);
-void updateMainWindow(Window* window);
+// void updateMainWindow(Window* window, Video* video);
 
 #ifdef __cplusplus
 }

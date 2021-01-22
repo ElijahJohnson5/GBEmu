@@ -58,7 +58,17 @@ typedef struct CPU {
     uint8_t currentClock;
     uint8_t currentOp;
     uint32_t totalClock;
+
+    uint8_t ime;
 } CPU;
+
+typedef enum CpuInterruptions {
+    CPU_VBLANK = 0b1,
+    CPU_LCD = 0b10,
+    CPU_TIMER = 0b100,
+    CPU_SERIAL = 0b1000,
+    CPU_JOYPAD = 0b10000,
+} CpuInterruptions;
 
 typedef struct MMU MMU;
 

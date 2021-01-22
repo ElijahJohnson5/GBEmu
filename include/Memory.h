@@ -25,7 +25,14 @@ typedef struct MMU
             };
         };
     };
+
     uint8_t *finishedBios;
+    uint16_t lastAddress;
+    union {
+        uint8_t last8;
+        uint16_t last16;
+    };
+    uint8_t lastFilled;
 } MMU;
 
 #ifdef __cplusplus

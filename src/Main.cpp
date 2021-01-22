@@ -55,6 +55,7 @@ int main(int argc, char *args[])
 
     gladLoadGL();
 
+
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
 
@@ -105,6 +106,44 @@ int main(int argc, char *args[])
     }
 
     CPU* cpu = createCPU();
+    Video* video = createVideo(mmu);
+
+    /*Open GL TESTING */
+    SDL_GL_MakeCurrent(mainWindow->window, mainWindow->glContext);
+    //TODO use these quadVertices
+    // float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
+    //     // positions   // texCoords
+    //     -1.0f,  1.0f,  0.0f, 1.0f,
+    //     -1.0f, -1.0f,  0.0f, 0.0f,
+    //      1.0f, -1.0f,  1.0f, 0.0f,
+
+    //     -1.0f,  1.0f,  0.0f, 1.0f,
+    //      1.0f, -1.0f,  1.0f, 0.0f,
+    //      1.0f,  1.0f,  1.0f, 1.0f
+    // };
+
+    // unsigned int quadVAO, quadVBO;
+    // glGenVertexArrays(1, &quadVAO);
+    // glGenBuffers(1, &quadVBO);
+    // glBindVertexArray(quadVAO);
+    // glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    // glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    // glEnableVertexAttribArray(0);
+    // glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    // glEnableVertexAttribArray(1);
+    // glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
+    GLuint mainTextureID;
+    glGenTextures(1, &mainTextureID);
+    glBindTexture(GL_TEXTURE_2D, mainTextureID);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, VIDEO_WIDTH, VIDEO_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
 
     memcpy(mmu->rom, file, size);
 
@@ -116,7 +155,7 @@ int main(int argc, char *args[])
 
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    std::thread guiThread(GUIThread, std::ref(quit), cpu, mmu, disassembledInstructions, pcToIndex);
+    std::thread guiThread(GUIThread, std::ref(quit), cpu, mmu, video, disassembledInstructions, pcToIndex);
 
     while (!quit)
     {
@@ -181,7 +220,7 @@ int main(int argc, char *args[])
             ImGui_ImplSDL2_NewFrame(debugWindow->window);
             ImGui::NewFrame();
             {
-                DebuggerGUI::ShowDebuggerGUI(cpu, mmu, disassembledInstructions, i);
+                DebuggerGUI::ShowDebuggerGUI(video, cpu, mmu, disassembledInstructions, i);
             }
             ImGui::Render();
             glViewport(0, 0, (int)debugWindow->width, (int)debugWindow->height);
@@ -191,7 +230,30 @@ int main(int argc, char *args[])
             SDL_GL_SwapWindow(debugWindow->window);
         }
 
-        updateMainWindow(mainWindow);
+
+        if (video->canrender)
+        {
+            SDL_GL_MakeCurrent(mainWindow->window, mainWindow->glContext);
+            glViewport(0, 0, (int)mainWindow->width, (int)mainWindow->height);
+            glClear(GL_COLOR_BUFFER_BIT);
+            glBindTexture(GL_TEXTURE_2D, mainTextureID);
+            glEnable(GL_TEXTURE_2D);
+            //TODO Make this into shader with a quad vertices
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VIDEO_WIDTH, VIDEO_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, video->framebuffer);
+            glBegin(GL_QUADS);
+            glTexCoord2i(0,0); glVertex2i(-1,1);
+            glTexCoord2i(0,1); glVertex2i(-1,-1);
+            glTexCoord2i(1,1); glVertex2i(1,-1);
+            glTexCoord2i(1,0); glVertex2i(1,1);
+            glEnd();
+
+            // glBindVertexArray(quadVAO);
+            // glDrawArrays(GL_TRIANGLES, 0, 6);
+            glDisable(GL_TEXTURE_2D);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            video->canrender = 0;
+            SDL_GL_SwapWindow(mainWindow->window);
+        }
     }
 
     guiThread.join();
@@ -203,8 +265,9 @@ int main(int argc, char *args[])
 
     delete[] disassembledInstructions;
 
-    destroyMMU(mmu);
+    destroyVideo(video);
     destroyCPU(cpu);
+    destroyMMU(mmu);
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
@@ -297,18 +360,21 @@ void PrintGBState(CPU *cpu, MMU* mmu)
     printf("\n");
 }
 
-void GUIThread(int& quit, CPU* cpu, MMU* mmu, DisassembledInstruction* disassembledInstructions, std::map<int, int> pcToIndex)
+void GUIThread(int& quit, CPU* cpu, MMU* mmu, Video* video, DisassembledInstruction* disassembledInstructions, std::map<int, int> pcToIndex)
 {
     while (!quit)
     {
         if (!DebuggerGUI::paused)
         {
             stepCPU(cpu, mmu);
+            stepVideo(video, cpu, mmu);
             if (disassembledInstructions[pcToIndex[cpu->pc]].breakpoint)
             {
                 DebuggerGUI::paused = true;
             }
         }
-
+#ifdef __unix__
+        SDL_Delay(0);
+#endif
     }
 }

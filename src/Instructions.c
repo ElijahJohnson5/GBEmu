@@ -9,7 +9,7 @@ void NOP(CPU* cpu, MMU* mmu)
 
 void DI(CPU* cpu, MMU* mmu)
 {
-    return;
+    cpu->ime = 0;
 }
 
 void JP_NN(CPU* cpu, MMU* mmu)
@@ -98,18 +98,18 @@ void LD_HLDEC_A(CPU* cpu, MMU* mmu)
 }
 
 
-void LD_FF00_A(CPU* cpu, MMU* mmu)
+void LD_FF00_N_A(CPU* cpu, MMU* mmu)
 {
     uint8_t value = readAddr8(mmu, cpu->pc);
-    writeAddr8(mmu, 0xFF00 + value, cpu->a);
+    uint16_t addr = 0xFF00 + value;
+    writeAddr8(mmu, addr, cpu->a);
 }
 
 void LD_A_FF00_N(CPU* cpu, MMU* mmu)
 {
     uint8_t offset = readAddr8(mmu, cpu->pc);
-    uint8_t value = readAddr8(mmu, 0xFF00 + offset);
-
-    cpu->a = value;
+    uint16_t addr = 0xFF00 + offset;
+    cpu->a = readAddr8(mmu, addr);
 }
 
 void LD_B_H(CPU* cpu, MMU* mmu)
@@ -161,6 +161,14 @@ void CP_A_N(CPU* cpu, MMU* mmu)
 void SUB_A_H(CPU* cpu, MMU* mmu)
 {
     SUB(cpu, cpu->h);
+}
+
+void INTERRUPT(CPU* cpu, MMU* mmu, uint8_t interrupt)
+{
+    if (interrupt & CPU_VBLANK)
+    {
+        printf("VBLANK Interrupt");
+    }
 }
 
 const Instruction instructions[256] = {
@@ -373,7 +381,7 @@ const Instruction instructions[256] = {
     {"RET NZ", 0, 8, NULL},// case 0xC0: printf("RET NZ"); break;
     {"POP BC", 0, 12, NULL},// case 0xC1: printf("POP BC"); break;
     {"JP NZ,$%02X%02X", 2, 12, NULL},// case 0xC2: printf("JP NZ,%02X%02X", code[2],code[1]); opbytes = 3; break;
-    {"JP $%02X%02X", 2, 16, &JP_NN},// case 0xC3: printf("JP %02X%02X", code[2], code[1]); opbytes = 3; break;
+    {"JP $%02X%02X", 2, 12, &JP_NN},// case 0xC3: printf("JP %02X%02X", code[2], code[1]); opbytes = 3; break;
     {"CALL NZ,$%02X%02X", 2, 12, NULL},// case 0xC4: printf("CALL NZ,%02X%02X", code[2], code[1]); opbytes = 3; break;
     {"PUSH BC", 0, 16, NULL},// case 0xC5: printf("PUSH BC"); break;
     {"ADD A,$%02X", 1, 8, NULL},// case 0xC6: printf("ADD A,%02X", code[1]); opbytes = 2; break;
@@ -409,7 +417,7 @@ const Instruction instructions[256] = {
     {"SBC A,$%02X", 1, 8, NULL},// case 0xDE: printf("SBC A,%02X", code[1]); opbytes = 2; break;
     {"RST 18h", 0, 16, NULL},// case 0xDF: printf("RST 18h"); break;
 
-    {"LD ($FF00+$%02X),A", 1, 12, &LD_FF00_A},// case 0xE0: printf("LD ($FF00+%02X),A", code[1]); opbytes = 2; break;
+    {"LD ($FF00+$%02X),A", 1, 12, &LD_FF00_N_A},// case 0xE0: printf("LD ($FF00+%02X),A", code[1]); opbytes = 2; break;
     {"POP HL", 0, 12, NULL},// case 0xE1: printf("POP HL"); break;
     {"LD ($FF00+$C),A", 0, 8, NULL},// case 0xE2: printf("LD ($FF00+C),A"); break;
     {"ERROR", 0, 0, NULL},

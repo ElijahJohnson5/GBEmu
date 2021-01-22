@@ -1,6 +1,7 @@
 #include "Memory.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 static uint8_t BIOS[0x100] = {
 	0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
@@ -91,6 +92,10 @@ void writeAddr8(MMU* mmu, uint16_t addr, uint8_t data)
     if (!(*mmu->finishedBios) && addr >= 0x00 && addr <= 0xFF)
         return;
 
+    mmu->lastFilled = 1;
+    mmu->lastAddress = addr;
+    mmu->last8 = data;
+
     switch ((addr & 0xF000) >> 12)
     {
         case 0x0: case 0x1: case 0x2: case 0x3:
@@ -168,6 +173,10 @@ void writeAddr16(MMU* mmu, uint16_t addr, uint16_t data)
 {
     writeAddr8(mmu, addr, data & 0xFF);
     writeAddr8(mmu, addr + 1, data >> 8);
+
+    mmu->lastFilled = 1;
+    mmu->lastAddress = addr;
+    mmu->last16 = data;
 }
 
 MMU* createMMU()
@@ -180,6 +189,7 @@ MMU* createMMU()
         return NULL;
     }
 
+    mmu->lastFilled = 0;
     mmu->finishedBios = mmu->addr + 0xFF50;
     return mmu;
 }

@@ -7,16 +7,23 @@
 
 #include "CPU.h"
 #include "Memory.h"
+#include "Video.h"
 #include "Instructions.h"
 #include "Main.h"
+
+void stepFunction(Video* video, CPU* cpu, MMU* mmu)
+{
+    stepCPU(cpu, mmu);
+    stepVideo(video, cpu, mmu);
+}
 
 bool DebuggerGUI::paused = true;
 bool DebuggerGUI::showMemoryViewer = false;
 bool DebuggerGUI::showDissasembly = false;
 MemoryEditor DebuggerGUI::memEdit;
-Step DebuggerGUI::step = &stepCPU;
+Step DebuggerGUI::step = &stepFunction;
 
-void DebuggerGUI::ShowDebuggerGUI(CPU* cpu, MMU* mmu, DisassembledInstruction* disassembledInstructions, int sizeInstructions)
+void DebuggerGUI::ShowDebuggerGUI(Video* video, CPU* cpu, MMU* mmu, DisassembledInstruction* disassembledInstructions, int sizeInstructions)
 {
     ImGui::SetNextWindowSize(ImVec2(500, 500), ImGuiCond_Appearing);
     ImGui::Begin("Debug Data", NULL, ImGuiWindowFlags_NoCollapse);
@@ -24,16 +31,18 @@ void DebuggerGUI::ShowDebuggerGUI(CPU* cpu, MMU* mmu, DisassembledInstruction* d
 
     if (ImGui::TreeNode("CPU"))
     {
+        uint8_t op = readAddr8(mmu, cpu->pc);
+
         ImGui::Text("A: %X B: %X C: %X D: %X\n", cpu->a, cpu->b, cpu->c, cpu->d);
         ImGui::Text("E: %X F: %X H: %X L: %X\n", cpu->e, cpu->f, cpu->h, cpu->l);
         ImGui::Text("PC: %X SP: %X\n", cpu->pc, cpu->sp);
         ImGui::Text("Z: %X N: %X H: %X C: %X\n", cpu->cc.z, cpu->cc.n, cpu->cc.h, cpu->cc.c);
-        ImGui::Text("Next instruction to execute: %X\n", cpu->currentOp);
+        ImGui::Text("Next instruction to execute: %X\n", op);
         ImGui::TextUnformatted("Disassembled Instruction:");
 
         //if (paused)
         //{
-            Instruction current = instructions[cpu->currentOp];
+            Instruction current = instructions[op];
 
             ImGui::TextUnformatted("\t");
             ImGui::SameLine();
@@ -96,9 +105,10 @@ void DebuggerGUI::ShowDebuggerGUI(CPU* cpu, MMU* mmu, DisassembledInstruction* d
             {
                 if (step != nullptr)
                 {
-                    step(cpu, mmu);
+                    step(video, cpu, mmu);
                 }
             }
+            ImGui::SameLine();
         }
 
 
@@ -115,8 +125,6 @@ void DebuggerGUI::ShowDebuggerGUI(CPU* cpu, MMU* mmu, DisassembledInstruction* d
             {
                 paused = !paused;
             }
-
-            ImGui::SameLine();
         }
 
         ImGui::SameLine();
@@ -150,7 +158,7 @@ void DebuggerGUI::ShowMemoryViewerGUI(CPU* cpu, MMU* mmu)
 void DebuggerGUI::ShowDisassemblyGUI(CPU* cpu, MMU* mmu, DisassembledInstruction* disassembledInstructions, int sizeInstructions)
 {
     ImGui::Begin("Dissasembly", &showDissasembly, ImGuiWindowFlags_NoCollapse);
-    ImGui::BeginChild("ScrollingRegion", ImVec2(0, 0), ImGuiWindowFlags_AlwaysVerticalScrollbar);
+    ImGui::BeginChild("ScrollingRegion", ImVec2(0, 0), false, ImGuiWindowFlags_AlwaysVerticalScrollbar);
     ImGuiListClipper clipper(sizeInstructions, ImGui::GetTextLineHeightWithSpacing());
     while (clipper.Step())
     {

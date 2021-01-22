@@ -17,7 +17,7 @@ typedef struct Instruction {
 void NOP(CPU* cpu, MMU* mmu);
 void JP(CPU* cpu, uint16_t addr, uint8_t offset);
 void JR(CPU *cpu, int8_t offset);
-
+void INTERRUPT(CPU* cpu, MMU* mmu, uint8_t interrupt);
 
 #ifdef __cplusplus
 extern "C" {

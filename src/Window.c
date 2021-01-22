@@ -73,11 +73,11 @@ void handleEvents(Window* window, int* quit)
 	//}
 }
 
-void updateMainWindow(Window* window)
-{
-	SDL_GL_MakeCurrent(window->window, window->glContext);
-	glViewport(0, 0, (int)window->width, (int)window->height);
-	glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
-	glClear(GL_COLOR_BUFFER_BIT);
-	SDL_GL_SwapWindow(window->window);
-}
+// void updateMainWindow(Window* window, Video* video)
+// {
+// 	SDL_GL_MakeCurrent(window->window, window->glContext);
+// 	glViewport(0, 0, (int)window->width, (int)window->height);
+// 	glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
+// 	glClear(GL_COLOR_BUFFER_BIT);
+// 	SDL_GL_SwapWindow(window->window);
+// }

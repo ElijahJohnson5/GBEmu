@@ -108,7 +108,7 @@ int main(int argc, char *args[])
     CPU* cpu = createCPU();
     Video* video = createVideo(mmu);
 
-    /*Open GL TESTING */
+    //TODO move into some kind of drawing for the mainwindow
     SDL_GL_MakeCurrent(mainWindow->window, mainWindow->glContext);
     //TODO use these quadVertices
     // float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
@@ -155,7 +155,7 @@ int main(int argc, char *args[])
 
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    std::thread guiThread(GUIThread, std::ref(quit), cpu, mmu, video, disassembledInstructions, pcToIndex);
+    std::thread cpuThread(CPUThread, std::ref(quit), cpu, mmu, video, disassembledInstructions, pcToIndex);
 
     while (!quit)
     {
@@ -231,14 +231,15 @@ int main(int argc, char *args[])
         }
 
 
-        if (video->canrender)
-        {
+       // if (video->canrender)
+       // {
             SDL_GL_MakeCurrent(mainWindow->window, mainWindow->glContext);
             glViewport(0, 0, (int)mainWindow->width, (int)mainWindow->height);
             glClear(GL_COLOR_BUFFER_BIT);
             glBindTexture(GL_TEXTURE_2D, mainTextureID);
             glEnable(GL_TEXTURE_2D);
             //TODO Make this into shader with a quad vertices
+            //TODO figure out off by one in video_height somewhere
             glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VIDEO_WIDTH, VIDEO_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, video->framebuffer);
             glBegin(GL_QUADS);
             glTexCoord2i(0,0); glVertex2i(-1,1);
@@ -253,10 +254,10 @@ int main(int argc, char *args[])
             glBindTexture(GL_TEXTURE_2D, 0);
             video->canrender = 0;
             SDL_GL_SwapWindow(mainWindow->window);
-        }
+       // }
     }
 
-    guiThread.join();
+    cpuThread.join();
 
 
     for (int j = 0; j < i; j++) {
@@ -360,7 +361,7 @@ void PrintGBState(CPU *cpu, MMU* mmu)
     printf("\n");
 }
 
-void GUIThread(int& quit, CPU* cpu, MMU* mmu, Video* video, DisassembledInstruction* disassembledInstructions, std::map<int, int> pcToIndex)
+void CPUThread(int& quit, CPU* cpu, MMU* mmu, Video* video, DisassembledInstruction* disassembledInstructions, std::map<int, int> pcToIndex)
 {
     while (!quit)
     {
@@ -373,8 +374,6 @@ void GUIThread(int& quit, CPU* cpu, MMU* mmu, Video* video, DisassembledInstruct
                 DebuggerGUI::paused = true;
             }
         }
-#ifdef __unix__
         SDL_Delay(0);
-#endif
     }
 }

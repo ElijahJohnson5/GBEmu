@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(Emulator)
+if (APPLE)
+    set (CMAKE_CXX_STANDARD 11)
+endif()
+
 
 set(SRC 
     src/CPU.c
@@ -16,6 +20,8 @@ set(SRC
     src/Main.cpp
     src/Window.c
     src/Video.c
+    src/Util.c
+    src/Shader.c
     src/DebuggerGUI.cpp
 )
 
@@ -38,6 +44,8 @@ if (WIN32)
         include/KHR/khrplatform.h
         include/Window.h
         include/Video.h
+        include/Shader.h
+        include/Util.h
         include/DebuggerGUI.h
         include/imgui/imgui_memory_editor.h
         include/imgui/imconfig.h

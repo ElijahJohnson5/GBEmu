@@ -16,6 +16,8 @@
 #include "Main.h"
 #include "Instructions.h"
 #include "DebuggerGUI.h"
+#include "Util.h"
+#include "Shader.h"
 
 int main(int argc, char *args[])
 {
@@ -24,10 +26,19 @@ int main(int argc, char *args[])
         return -1;
     }
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    #ifdef __APPLE__ 
+        const char* glsl_version = "#version 150";
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // Always required on Mac
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+    #else
+        const char* glsl_version = "#version 130";
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    #endif
 
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
@@ -61,24 +72,10 @@ int main(int argc, char *args[])
 
     ImGui::StyleColorsDark();
     ImGui_ImplSDL2_InitForOpenGL(debugWindow->window, debugWindow->glContext);
-    ImGui_ImplOpenGL3_Init("#version 130");
+    ImGui_ImplOpenGL3_Init(glsl_version);
 
-    FILE* gbFile = fopen("roms/Tetris.gb", "rb");
-
-    if (!gbFile)
-    {
-        printf("Could not open file \"roms/Tetris.gb\"\n");
-        return -1;
-    }
-
-    fseek(gbFile, 0, SEEK_END);
-    long size = ftell(gbFile);
-    rewind(gbFile);
-
-    unsigned char *file = (unsigned char*)malloc(size + 1);
-    fread(file, 1, size, gbFile);
-
-    fclose(gbFile);
+    long size;
+    unsigned char* file = (unsigned char*)readFile("roms/Tetris.gb", "rb", &size);
 
     int pc = 0;
     int i = 0;
@@ -110,28 +107,31 @@ int main(int argc, char *args[])
 
     //TODO move into some kind of drawing for the mainwindow
     SDL_GL_MakeCurrent(mainWindow->window, mainWindow->glContext);
-    //TODO use these quadVertices
-    // float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
-    //     // positions   // texCoords
-    //     -1.0f,  1.0f,  0.0f, 1.0f,
-    //     -1.0f, -1.0f,  0.0f, 0.0f,
-    //      1.0f, -1.0f,  1.0f, 0.0f,
 
-    //     -1.0f,  1.0f,  0.0f, 1.0f,
-    //      1.0f, -1.0f,  1.0f, 0.0f,
-    //      1.0f,  1.0f,  1.0f, 1.0f
-    // };
+    uint32_t shaderID = createShaderProgram("shader/texture.vs", "shader/texture.fs");
 
-    // unsigned int quadVAO, quadVBO;
-    // glGenVertexArrays(1, &quadVAO);
-    // glGenBuffers(1, &quadVBO);
-    // glBindVertexArray(quadVAO);
-    // glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-    // glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-    // glEnableVertexAttribArray(0);
-    // glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    // glEnableVertexAttribArray(1);
-    // glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
+        // positions   // texCoords
+        -1.0f,  1.0f,  0.0f, 1.0f,
+        -1.0f, -1.0f,  0.0f, 0.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+
+        -1.0f,  1.0f,  0.0f, 1.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+         1.0f,  1.0f,  1.0f, 1.0f
+    };
+
+    unsigned int quadVAO, quadVBO;
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     GLuint mainTextureID;
     glGenTextures(1, &mainTextureID);
@@ -234,23 +234,14 @@ int main(int argc, char *args[])
        // if (video->canrender)
        // {
             SDL_GL_MakeCurrent(mainWindow->window, mainWindow->glContext);
-            glViewport(0, 0, (int)mainWindow->width, (int)mainWindow->height);
             glClear(GL_COLOR_BUFFER_BIT);
             glBindTexture(GL_TEXTURE_2D, mainTextureID);
-            glEnable(GL_TEXTURE_2D);
-            //TODO Make this into shader with a quad vertices
             //TODO figure out off by one in video_height somewhere
             glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VIDEO_WIDTH, VIDEO_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, video->framebuffer);
-            glBegin(GL_QUADS);
-            glTexCoord2i(0,0); glVertex2i(-1,1);
-            glTexCoord2i(0,1); glVertex2i(-1,-1);
-            glTexCoord2i(1,1); glVertex2i(1,-1);
-            glTexCoord2i(1,0); glVertex2i(1,1);
-            glEnd();
 
-            // glBindVertexArray(quadVAO);
-            // glDrawArrays(GL_TRIANGLES, 0, 6);
-            glDisable(GL_TEXTURE_2D);
+            glUseProgram(shaderID);
+            glBindVertexArray(quadVAO);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
             glBindTexture(GL_TEXTURE_2D, 0);
             video->canrender = 0;
             SDL_GL_SwapWindow(mainWindow->window);
@@ -344,11 +335,11 @@ void PrintGBState(CPU *cpu, MMU* mmu)
     if (strcmp(current.disassembly, "PREFIX") == 0)
     {
         current = prefixInstructions[readAddr8(mmu, cpu->pc + 1)];
-        printf(current.disassembly);
+        printf("%s", current.disassembly);
     }
     else if (current.operandCount == 0)
     {
-        printf(current.disassembly);
+        printf("%s", current.disassembly);
     }
     else if (current.operandCount == 1)
     {

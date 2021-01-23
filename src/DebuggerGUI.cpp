@@ -50,11 +50,11 @@ void DebuggerGUI::ShowDebuggerGUI(Video* video, CPU* cpu, MMU* mmu, Disassembled
             if (strcmp(current.disassembly, "PREFIX") == 0)
             {
                 current = prefixInstructions[readAddr8(mmu, cpu->pc + 1)];
-                ImGui::Text(current.disassembly);
+                ImGui::TextUnformatted(current.disassembly);
             }
             else if (current.operandCount == 0)
             {
-                ImGui::Text(current.disassembly);
+                ImGui::TextUnformatted(current.disassembly);
             }
             else if (current.operandCount == 1)
             {
@@ -71,7 +71,7 @@ void DebuggerGUI::ShowDebuggerGUI(Video* video, CPU* cpu, MMU* mmu, Disassembled
             }
         //} 
 
-        ImGui::Text("Total Cycles: %lu", cpu->totalClock);
+        ImGui::Text("Total Cycles: %u", cpu->totalClock);
 
         ImGui::TreePop();
     }
@@ -168,7 +168,7 @@ void DebuggerGUI::ShowDisassemblyGUI(CPU* cpu, MMU* mmu, DisassembledInstruction
 
             if (paused && cpu->pc == ins.pc)
             {
-                ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), ins.disassembly);
+                ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), "%s", ins.disassembly);
             }
             else
             {

@@ -1,7 +1,7 @@
 #include "Window.h"
 #include "glad.h"
 
-Window *createWindow(const char* title, int width, int height, int shown)
+Window *createWindow(const char* title, int width, int height, int shown, void (*handleEvent)(Window*, int*, const SDL_Event*))
 {
 	Window* window = (Window*)malloc(sizeof(Window));
 
@@ -35,6 +35,7 @@ Window *createWindow(const char* title, int width, int height, int shown)
 	window->shown = shown;
 	window->width = width;
 	window->height = height;
+	window->handleEvent = handleEvent;
 
 	window->id = SDL_GetWindowID(window->window);
 
@@ -57,27 +58,58 @@ void destroyWindow(Window* window)
 	window = NULL;
 }
 
-void handleEvents(Window* window, int* quit)
+void handleEventDebugWindow(Window* window, int* quit, const SDL_Event* event)
 {
-
-
-	//const uint8_t* keysArray = SDL_GetKeyboardState(NULL);
-
-	//if (keysArray[SDL_SCANCODE_LCTRL] && keysArray[SDL_SCANCODE_B])
-	//{
-	//	if (display->debugWindow->shown == 0)
-	//	{
-	//		SDL_ShowWindow(display->debugWindow->window);
-	//		display->debugWindow->shown = 1;
-	//	}
-	//}
+		switch (event->type)
+		{
+			case SDL_WINDOWEVENT:
+				switch (event->window.event)
+				{
+					case SDL_WINDOWEVENT_CLOSE:
+						if (window->shown)
+						{
+							window->shown = 0;
+							SDL_HideWindow(window->window);
+						}
+						break;
+				}
+				break;
+			case SDL_WINDOWEVENT_RESIZED:
+				window->width = event->window.data1;
+				window->height = event->window.data2;
+				break;
+		}
 }
 
-// void updateMainWindow(Window* window, Video* video)
-// {
-// 	SDL_GL_MakeCurrent(window->window, window->glContext);
-// 	glViewport(0, 0, (int)window->width, (int)window->height);
-// 	glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
-// 	glClear(GL_COLOR_BUFFER_BIT);
-// 	SDL_GL_SwapWindow(window->window);
-// }
+void handleEventMainWindow(Window* window, int* quit, const SDL_Event* event)
+{
+		switch (event->type)
+		{
+			case SDL_WINDOWEVENT:
+				switch (event->window.event)
+				{
+					case SDL_WINDOWEVENT_CLOSE:
+						*quit = 1;
+						break;
+				}
+				break;
+			case SDL_WINDOWEVENT_RESIZED:
+				window->width = event->window.data1;
+				window->height = event->window.data2;
+				break;
+		}
+}
+
+void updateMainWindow(Window* window, uint32_t textureID, uint32_t shaderID, uint32_t quadVAO)
+{
+	SDL_GL_MakeCurrent(window->window, window->glContext);
+	glBindTexture(GL_TEXTURE_2D, textureID);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+
+	glUseProgram(shaderID);
+	glBindVertexArray(quadVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	SDL_GL_SwapWindow(window->window);
+}

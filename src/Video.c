@@ -1,9 +1,11 @@
 #include "Video.h"
-#include "Memory.h"
-#include "CPU.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
+#include "Memory.h"
+#include "CPU.h"
 
 Video* createVideo(MMU* mmu)
 {
@@ -31,7 +33,7 @@ Video* createVideo(MMU* mmu)
     video->colors[2] = 0x606060FF;
     video->colors[3] = 0x000000FF;
 
-    memset(video->framebuffer, 0, videoHeight * videoWidth * sizeof(uint32_t));
+    memset(video->framebuffer, 0, VIDEO_HEIGHT * VIDEO_WIDTH * sizeof(uint32_t));
 
     memset(video->tileset, 0, sizeof(video->tileset));
 
@@ -97,7 +99,7 @@ void stepVideo(Video* video, CPU* cpu, MMU* mmu)
                 video->currentClock %= videoTimes[video->mode];
                 *(video->line) = *(video->line) + 1;
 
-                if (*(video->line) == hlines)
+                if (*(video->line) == HLINES)
                 {
                     video->mode = VIDEO_MODE_VBLANK;
                     video->canrender = 1;
@@ -115,7 +117,7 @@ void stepVideo(Video* video, CPU* cpu, MMU* mmu)
                 video->currentClock %= videoTimes[video->mode];
                 *(video->line) = *(video->line) + 1;
                 
-                if (*(video->line) >= vlines)
+                if (*(video->line) >= VLINES)
                 {
                     video->mode = VIDEO_MODE_OAM;
                     *video->line = 0;
@@ -154,7 +156,7 @@ void renderLineVideo(Video* video, MMU* mmu)
     int8_t tile;
     uint32_t color;
 
-    for (x = 0; x < videoWidth; x++)
+    for (x = 0; x < VIDEO_WIDTH; x++)
     {
         tile = (int8_t)video->vram[mapoffset + lineoffset + (x / 8)];
         if (video->control->bg_tilemap_select && tile < 128) tile += 0x100;

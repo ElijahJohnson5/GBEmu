@@ -171,11 +171,27 @@ void INTERRUPT(CPU* cpu, MMU* mmu, uint8_t interrupt)
     }
 }
 
+void LD_BC_NN(CPU* cpu, MMU* mmu)
+{
+    uint16_t data = readAddr16(mmu, cpu->pc);
+    cpu->bc = data;
+}
+
+void LD_BC_A(CPU* cpu, MMU* mmu)
+{
+    writeAddr8(mmu, cpu->bc, cpu->a);
+}
+
+void INC_BC(CPU* cpu, MMU* mmu)
+{
+    
+}
+
 const Instruction instructions[256] = {
     {"NOP", 0, 4, &NOP}, // case 0x00: fprintf(debugFile, "NOP"); printf("NOP "); break;
-    {"LD BC,$%02X%02X", 2, 12, NULL}, // case 0x01: printf("LD BC,%02X%02X", code[2], code[1]); opbytes = 3; break;
-    {"LD (BC),A", 0, 8, NULL}, // case 0x02: printf("LD (BC),A "); break;
-    {"INC BC", 0, 8, NULL},// case 0x03: printf("INC BC "); break;
+    {"LD BC,$%02X%02X", 2, 12, &LD_BC_NN}, // case 0x01: printf("LD BC,%02X%02X", code[2], code[1]); opbytes = 3; break;
+    {"LD (BC),A", 0, 8, &LD_BC_A}, // case 0x02: printf("LD (BC),A "); break;
+    {"INC BC", 0, 8, &INC_BC},// case 0x03: printf("INC BC "); break;
     {"INC B", 0, 4, NULL},// case 0x04: printf("INC B "); break;
     {"DEC B", 0, 4, &DEC_B},// case 0x05: printf("DEC B "); break;
     {"LD B,$%02X", 1, 8, &LD_B_N},// case 0x06: printf("LD B,%02X ", code[1]); opbytes = 2; break;

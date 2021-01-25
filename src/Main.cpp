@@ -27,13 +27,13 @@ int main(int argc, char *args[])
     }
 
     #ifdef __APPLE__ 
-        const char* glsl_version = "#version 150";
+        const char* glsl_version = "#version 330";
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // Always required on Mac
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
     #else
-        const char* glsl_version = "#version 130";
+        const char* glsl_version = "#version 330";
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -44,7 +44,7 @@ int main(int argc, char *args[])
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
-    Window* mainWindow = createWindow("GBEmu", 1280, 720, 1);
+    Window* mainWindow = createWindow("GBEmu", 1280, 720, 1, &handleEventMainWindow);
 
     if (!mainWindow) {
         printf("Could not create mainWindow\n");
@@ -54,7 +54,7 @@ int main(int argc, char *args[])
     SDL_GL_MakeCurrent(mainWindow->window, mainWindow->glContext);
     SDL_GL_SetSwapInterval(0);
 
-    Window* debugWindow = createWindow("GBEmu Debugger", 1280, 720, 0);
+    Window* debugWindow = createWindow("GBEmu Debugger", 1280, 720, 0, &handleEventDebugWindow);
 
     if (!mainWindow) {
         printf("Could not create debugWindow\n");
@@ -141,7 +141,7 @@ int main(int argc, char *args[])
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, VIDEO_WIDTH, VIDEO_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, VIDEO_WIDTH, VIDEO_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, video->framebuffer);
 
     glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -170,31 +170,13 @@ int main(int argc, char *args[])
                     break;
                 case SDL_WINDOWEVENT:
                     //TODO make the windows handle their own events
-                    switch (event.window.event)
+                    if (event.window.windowID == mainWindow->id)
                     {
-                        case SDL_WINDOWEVENT_CLOSE:
-                            if (event.window.windowID == mainWindow->id)
-                            {
-                                quit = 1;
-                            }
-                            else if (debugWindow->shown && event.window.windowID == debugWindow->id)
-                            {
-                                debugWindow->shown = 0;
-                                SDL_HideWindow(debugWindow->window);
-                            }
-                            break;
-                        case SDL_WINDOWEVENT_RESIZED:
-                            if (event.window.windowID == mainWindow->id)
-                            {
-                                mainWindow->width = event.window.data1;
-                                mainWindow->height = event.window.data2;
-                            }
-                            if (event.window.windowID == debugWindow->id)
-                            {
-                                debugWindow->width = event.window.data1;
-                                debugWindow->height = event.window.data2;
-                            }
-                            break;
+                        mainWindow->handleEvent(mainWindow, &quit, &event);
+                    }
+                    else if (event.window.windowID == debugWindow->id)
+                    {
+                        debugWindow->handleEvent(debugWindow, &quit, &event);
                     }
                     break;
             }
@@ -231,21 +213,17 @@ int main(int argc, char *args[])
         }
 
 
-       // if (video->canrender)
-       // {
+       if (video->canrender)
+       {
             SDL_GL_MakeCurrent(mainWindow->window, mainWindow->glContext);
-            glClear(GL_COLOR_BUFFER_BIT);
             glBindTexture(GL_TEXTURE_2D, mainTextureID);
             //TODO figure out off by one in video_height somewhere
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VIDEO_WIDTH, VIDEO_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, video->framebuffer);
-
-            glUseProgram(shaderID);
-            glBindVertexArray(quadVAO);
-            glDrawArrays(GL_TRIANGLES, 0, 6);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VIDEO_WIDTH, VIDEO_HEIGHT, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, video->framebuffer);
             glBindTexture(GL_TEXTURE_2D, 0);
             video->canrender = 0;
-            SDL_GL_SwapWindow(mainWindow->window);
-       // }
+       }
+
+       updateMainWindow(mainWindow, mainTextureID, shaderID, quadVAO);
     }
 
     cpuThread.join();

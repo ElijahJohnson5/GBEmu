@@ -12,17 +12,21 @@ typedef struct Window {
 	int height;
 	int shown;
 	uint32_t id;
+	void (*handleEvent)(struct Window*, int*, const SDL_Event*);
 } Window;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-Window* createWindow(const char* title, int width, int height, int shown);
+Window* createWindow(const char* title, int width, int height, int shown, void (*handleEvent)(Window*, int*, const SDL_Event*));
 void destroyWindow(Window* window);
 
-void handleEvents(Window* window, int* quit);
-// void updateMainWindow(Window* window, Video* video);
+void handleEventDebugWindow(Window* window, int* quit, const SDL_Event* event);
+void handleEventMainWindow(Window* window, int* quit, const SDL_Event* event);
+
+uint32_t getWindowIDByEvent(const SDL_Event* event);
+void updateMainWindow(Window* window, uint32_t textureID, uint32_t shaderID, uint32_t quadVAO);
 
 #ifdef __cplusplus
 }

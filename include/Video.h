@@ -16,11 +16,8 @@ typedef enum VideoMode {
 #define VIDEO_WIDTH 160
 #define VIDEO_HEIGHT 144
 
-const int videoWidth = 160;
-const int videoHeight = 144;
-
-const int hlines = 143;
-const int vlines = 153;
+#define HLINES 143
+#define VLINES 153
 
 const uint16_t videoTimes[4] = { 204, 456, 80, 172 };
 
